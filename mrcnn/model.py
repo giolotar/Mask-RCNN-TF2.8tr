@@ -9,7 +9,7 @@ import tensorflow as tf
 import tensorflow.keras as keras
 import tensorflow.keras.backend as K
 import tensorflow.keras.layers as KL
-from typing import List, Union, Tuple, Callable, Dict, Optional
+from typing import List, Tuple, Callable, Dict, Optional
 from tensorflow.keras.optimizers import Optimizer
 from tensorflow.keras.callbacks import History
 
@@ -21,13 +21,6 @@ from .CustomLayers import (
     ROIPoolingLayer,
     GetAnchors,
     NormBoxesGraph,
-)
-from .CustomLosses import (
-    MRCNNBboxLoss,
-    MRCNNClassLoss,
-    MRCNNMaskLoss,
-    RPNBboxLoss,
-    RPNClassLoss
 )
 from .MRCNNComponents import RPNComponent, MaskSegmentationComponent, ResnetComponent
 from .CustomKerasModel import MaskRCNNModel
@@ -56,11 +49,17 @@ class MaskRCNN:
         self.config = config
 
         if not model_dir:
-            self.model_dir = utilfunctions.get_root_dir_path() + '/logs'
+            self.model_dir = os.path.join(
+                utilfunctions.get_root_dir_path(),
+                'log',
+            )
         else:
             self.model_dir = model_dir
 
-        self._log_dir = ""
+        if not os.path.exists(self.model_dir):
+            os.system(f"mkdir {self.model_dir}")
+
+        self._log_dir = os.path.join(self.model_dir, "log")
         self._checkpoint_path = ""
         self.set_log_dir()
         self._build_logger()
@@ -81,6 +80,7 @@ class MaskRCNN:
             level = logging.DEBUG
             if not os.path.exists(self._log_dir):
                 os.system("mkdir '{}'".format(self._log_dir))
+
             path_to_log = os.path.join(self._log_dir, self.mode + '.log')
             handler = logging.FileHandler(filename=path_to_log, encoding='utf-8')
         else:
@@ -408,7 +408,8 @@ class MaskRCNN:
                 # are different due to the different number of classes
                 # See README for instructions to download the COCO weights
                 self._logger.info('Downloading COCO weights')
-                filepath = utilfunctions.download_trained_weights(filepath)
+                coco_weights_path = os.path.join(self.model_dir, "mask_rcnn_coco.h5")
+                filepath = utilfunctions.download_trained_weights(coco_weights_path)
             elif init_with == "last":
                 # Load the last model you trained and continue training
                 filepath = self.find_last()

@@ -871,31 +871,33 @@ def unzip_dataset(dataset_path: str):
     return unzipped_path_dataset
 
 
-def download_trained_weights(coco_model_path=None, verbose=1) -> str:
+def download_trained_weights(weights_model_path=None, weights_url=None, verbose=1) -> str:
     """Download COCO trained weights from Releases.
 
     coco_model_path: local path of COCO trained weights
     """
     root_dir = os.getcwd()
-    if not coco_model_path:
-        coco_model_path = os.path.join(
+    if not weights_model_path:
+        weights_model_path = os.path.join(
             root_dir,
             DEFAULT_COCO_WEIGHTS_PATH
         )
         if not os.path.exists(os.path.join(root_dir, 'logs')):
             os.system("mkdir %s" % './logs')
 
-    if os.path.exists(coco_model_path):
+    if os.path.exists(weights_model_path) and os.path.isfile(weights_model_path):
         print("Using downloaded weights at %s" % DEFAULT_COCO_WEIGHTS_PATH)
-        return coco_model_path
+        return weights_model_path
 
+    url = weights_url if weights_url is not None else COCO_MODEL_URL
     if verbose > 0:
-        print("Downloading pretrained model to " + coco_model_path + " ...")
-    with urllib.request.urlopen(COCO_MODEL_URL) as resp, open(coco_model_path, 'wb') as out:
+        print("Downloading pretrained model to " + weights_model_path + " ...")
+    with urllib.request.urlopen(url) as resp, open(weights_model_path, 'wb') as out:
         shutil.copyfileobj(resp, out)
     if verbose > 0:
         print("... done downloading pretrained model!")
-    return coco_model_path
+
+    return weights_model_path
 
 
 def norm_boxes(boxes, shape):
