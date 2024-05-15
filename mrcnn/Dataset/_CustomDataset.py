@@ -68,7 +68,10 @@ class CustomDataset(Dataset):
                 except KeyError as key:
                     print("Warning: Skipping image (id: {}) with missing key: {}".format(image_id, key))
                     continue
-
+                
+                if image_id not in image_annotations:
+                    continue
+                
                 image_path = os.path.abspath(os.path.join(images_dir, image_file_name))
                 image_annotations = annotations[image_id]
 
