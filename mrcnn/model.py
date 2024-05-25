@@ -1019,8 +1019,6 @@ class MaskRCNN:
         self._logger.info("molded_images data ->  shape: {} - min: {} - max: {}".format(
             molded_images.shape, molded_images.min(), molded_images.max())
         )
-        self._logger.info("image_metas: {}".format(image_metas))
-        self._logger.info("anchors: {}".format(anchors))
 
         # Run object detection
         return self._process_detections(

@@ -16,7 +16,7 @@ import warnings
 
 
 # URL from which to download the latest COCO trained weights
-COCO_MODEL_URL = "https://github.com/matterport/Mask_RCNN/releases/download/v2.0/mask_rcnn_coco.h5"
+COCO_MODEL_URL = "https://github.com/Rene-Michel99/Mask-RCNN-TF2.8/releases/download/pretrained_weights/mask_rcnn_coco.h5"
 DEFAULT_COCO_WEIGHTS_PATH = "./logs/mask_rcnn_coco.h5"
 INTERPOLATION_METHODS = {
     "bicubic": cv.INTER_CUBIC,

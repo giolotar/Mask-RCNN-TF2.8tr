@@ -69,7 +69,7 @@ class CustomDataset(Dataset):
                     print("Warning: Skipping image (id: {}) with missing key: {}".format(image_id, key))
                     continue
                 
-                if image_id not in image_annotations:
+                if image_id not in annotations:
                     continue
                 
                 image_path = os.path.abspath(os.path.join(images_dir, image_file_name))
