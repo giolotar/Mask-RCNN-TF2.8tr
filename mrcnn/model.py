@@ -73,8 +73,8 @@ class MaskRCNN:
         if self.config.verbose_mode.lower() != "debug":
             return
 
-        self._logger = logging.getLogger('MaskRCNN')
-        self._logger.setLevel(logging.DEBUG)
+        self.logger = logging.getLogger('MaskRCNN')
+        self.logger.setLevel(logging.DEBUG)
 
         if self.config.generate_log:
             level = logging.DEBUG
@@ -90,7 +90,7 @@ class MaskRCNN:
         handler.setLevel(level)
         formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         handler.setFormatter(formatter)
-        self._logger.addHandler(handler)
+        self.logger.addHandler(handler)
 
     def rebuild_as(self, mode: str, config: Config = None):
         assert mode in ['training', 'inference']
@@ -297,11 +297,11 @@ class MaskRCNN:
             log_message = '''Image size must be dividable by 2 at least 6 times
                             to avoid fractions when downscaling and upscaling.
                             For example, use 256, 320, 384, 448, 512, ... etc.'''
-            self._logger.error(log_message)
+            self.logger.error(log_message)
             raise Exception(log_message)
 
-        self._logger.info('Using config - {}'.format(self.config.display()))
-        self._logger.info('Building Mask R-CNN in {} architecture'.format(mode))
+        self.logger.info('Using config - {}'.format(self.config.NAME))
+        self.logger.info('Building Mask R-CNN in {} architecture'.format(mode))
         # Inputs
         input_image = KL.Input(
             shape=[None, None, config.IMAGE_SHAPE[2]], name="input_image"
@@ -322,7 +322,7 @@ class MaskRCNN:
                     config, input_image, input_image_meta
                 )
         except Exception as ex:
-            self._logger.error(
+            self.logger.error(
                 'Error building Mask R-CNN architecture in mode {} - {}'.format(mode, ex),
                 exc_info=True
             )
@@ -348,7 +348,7 @@ class MaskRCNN:
         dir_names = sorted(dir_names)
         if not dir_names:
             import errno
-            self._logger.error(
+            self.logger.error(
                 "Could not find model directory under {}".format(self.model_dir)
             )
             raise FileNotFoundError(
@@ -363,7 +363,7 @@ class MaskRCNN:
         checkpoints = sorted(checkpoints)
         if not checkpoints:
             import errno
-            self._logger.error(
+            self.logger.error(
                 "Could not find weight files in {}".format(dir_name)
             )
             raise FileNotFoundError(
@@ -391,7 +391,7 @@ class MaskRCNN:
 
         Returns: None
         """
-        self._logger.info('Starting load weights - filepath: {} - type: {}'.format(
+        self.logger.info('Starting load weights - filepath: {} - type: {}'.format(
             filepath, init_with
         ))
         if not filepath and not init_with:
@@ -401,13 +401,13 @@ class MaskRCNN:
             assert init_with in ["coco", "imagenet", "last"],\
                 "init_with para must be coco, imagenet or last for the last trained model"
             if init_with == "imagenet":
-                self._logger.info('Downloading imagenet weights')
+                self.logger.info('Downloading imagenet weights')
                 filepath = self.get_imagenet_weights()
             elif init_with == "coco":
                 # Load weights trained on MS COCO, but skip layers that
                 # are different due to the different number of classes
                 # See README for instructions to download the COCO weights
-                self._logger.info('Downloading COCO weights')
+                self.logger.info('Downloading COCO weights')
                 coco_weights_path = os.path.join(self.model_dir, "mask_rcnn_coco.h5")
                 filepath = utilfunctions.download_trained_weights(coco_weights_path)
             elif init_with == "last":
@@ -416,7 +416,7 @@ class MaskRCNN:
 
         # In multi-GPU training, we wrap the model. Get layers
         # of the inner model because they have the weights.
-        self._logger.info("Using weights {}".format(filepath))
+        self.logger.info("Using weights {}".format(filepath))
         skip_mismatch = self.mode == 'training'
         try:
             self.keras_model.load_weights(filepath, by_name=by_name, skip_mismatch=skip_mismatch)
@@ -424,7 +424,7 @@ class MaskRCNN:
             # Update the log directory
             self.set_log_dir(filepath)
         except Exception as ex:
-            self._logger.error(
+            self.logger.error(
                 'Error when loading weights to MaskRCNNModel - {}'.format(ex),
                 exc_info=True
             )
@@ -532,7 +532,7 @@ class MaskRCNN:
         with actual architecture.
         """
         optimizer = self.config.OPTIMIZER
-        self._logger.info("Using {} optimizer".format(optimizer))
+        self.logger.info("Using {} optimizer".format(optimizer))
         if optimizer == 'SGD':
             return keras.optimizers.SGD(
                 learning_rate=learning_rate,
@@ -556,7 +556,7 @@ class MaskRCNN:
         """Gets the model ready for training. Adds losses, regularization, and
         metrics. Then calls the Keras compile() function.
         """
-        self._logger.info("Building compiler")
+        self.logger.info("Building compiler")
         try:
             # Optimizer object
             optimizer = self._get_optimizer(learning_rate, momentum)
@@ -565,9 +565,9 @@ class MaskRCNN:
             # Compile
             self.keras_model.compile(optimizer=optimizer)
             self.is_compiled = True
-            self._logger.info("Model compiled successfully!")
+            self.logger.info("Model compiled successfully!")
         except Exception as ex:
-            self._logger.error(
+            self.logger.error(
                 "Error when building compiler - {}".format(ex),
                 exc_info=True
             )
@@ -763,8 +763,8 @@ class MaskRCNN:
             callbacks += custom_callbacks
 
         # Train
-        self._logger.info("Starting at epoch {}. LR={}".format(self.epoch, learning_rate))
-        self._logger.info("Checkpoint Path: {}".format(self._checkpoint_path))
+        self.logger.info("Starting at epoch {}. LR={}".format(self.epoch, learning_rate))
+        self.logger.info("Checkpoint Path: {}".format(self._checkpoint_path))
         self.set_trainable(layers)
         self.compile(learning_rate, self.config.LEARNING_MOMENTUM)
 
@@ -794,7 +794,7 @@ class MaskRCNN:
             self._write_history(history.history)
             return history.history
         except Exception as ex:
-            self._logger.error('Error when training Mask R-CNN {}'.format(ex), exc_info=True)
+            self.logger.error('Error when training Mask R-CNN {}'.format(ex), exc_info=True)
             raise ex
 
     def train_directly(self, x, y, learning_rate, epochs, layers,
@@ -831,8 +831,8 @@ class MaskRCNN:
             callbacks += custom_callbacks
 
         # Train
-        self._logger.info("Starting at epoch {}. LR={}".format(self.epoch, learning_rate))
-        self._logger.info("Checkpoint Path: {}".format(self._checkpoint_path))
+        self.logger.info("Starting at epoch {}. LR={}".format(self.epoch, learning_rate))
+        self.logger.info("Checkpoint Path: {}".format(self._checkpoint_path))
         self.set_trainable(layers)
         self.compile(learning_rate, self.config.LEARNING_MOMENTUM)
 
@@ -874,7 +874,7 @@ class MaskRCNN:
         - windows: [N, (y1, x1, y2, x2)]. The portion of the image that has the
             original image (padding excluded).
         """
-        self._logger.info('Molding input images')
+        self.logger.info('Molding input images')
         molded_images = []
         image_metas = []
         windows = []
@@ -900,7 +900,7 @@ class MaskRCNN:
         molded_images = np.stack(molded_images)
         image_metas = np.stack(image_metas)
         windows = np.stack(windows)
-        self._logger.info('Input image molded successfully!')
+        self.logger.info('Input image molded successfully!')
         return molded_images, image_metas, windows
 
     def unmold_detections(
@@ -997,7 +997,7 @@ class MaskRCNN:
         assert self.mode == "inference", "Create model in inference mode."
         assert len(images) == self.config.BATCH_SIZE, "len(images) must be equal to BATCH_SIZE"
 
-        self._logger.info("Processing {} images".format(len(images)))
+        self.logger.info("Processing {} images".format(len(images)))
 
         # Mold inputs to format expected by the neural network
         molded_images, image_metas, windows = self.mold_inputs(images)
@@ -1009,14 +1009,14 @@ class MaskRCNN:
             if g.shape == image_shape:
                 log_msg = '''After resizing, all images must have the same size.
                 Check IMAGE_RESIZE_MODE and image sizes.'''
-                self._logger.info(log_msg)
+                self.logger.info(log_msg)
                 raise Exception(log_msg)
 
         # Anchors
         anchors = self._get_anchors(image_shape)
         anchors = np.broadcast_to(anchors, (self.config.BATCH_SIZE,) + anchors.shape)
 
-        self._logger.info("molded_images data ->  shape: {} - min: {} - max: {}".format(
+        self.logger.info("molded_images data ->  shape: {} - min: {} - max: {}".format(
             molded_images.shape, molded_images.min(), molded_images.max())
         )
 
@@ -1035,18 +1035,18 @@ class MaskRCNN:
             windows: np.ndarray = None,
             verbose=0
     ) -> List[Dict[str, np.ndarray]]:
-        self._logger.info('Inserting input data into Mask RCNN')
+        self.logger.info('Inserting input data into Mask RCNN')
         try:
             detections, _, _, mrcnn_mask, _, _, _ = self.keras_model.predict(
                 [molded_images, image_metas, anchors], verbose=verbose
             )
         except Exception as ex:
-            self._logger.error(
+            self.logger.error(
                 'Error when calling predict from MaskRCNNModel - {}'.format(ex),
                 exc_info=True,
             )
             raise ex
-        self._logger.info('Predicted successfully!')
+        self.logger.info('Predicted successfully!')
 
         # Process detections
         results = []
