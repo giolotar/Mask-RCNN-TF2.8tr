@@ -4,7 +4,7 @@ print(find_packages())
 
 setup(
     name="maskrcnn",
-    version='2.5.6',
+    version='2.0.36',
     packages=find_packages(),
     install_requires=[
         "numpy",
