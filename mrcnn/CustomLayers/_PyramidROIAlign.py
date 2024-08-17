@@ -157,7 +157,7 @@ class PyramidROIAlign(tf.keras.layers.Layer):
         return tf.math.log(x) / tf.math.log(2.0)
 
     def compute_output_shape(self, input_shape):
-        return input_shape[0][:2] + self.pool_shape + (input_shape[2][-1], )
+        return input_shape[0][:2] + self.interface.pool_shape + (input_shape[2][-1], )
 
     def get_config(self):
         config = super().get_config()
