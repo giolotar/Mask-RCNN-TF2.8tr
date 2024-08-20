@@ -4,11 +4,11 @@ print(find_packages())
 
 setup(
     name="maskrcnn",
-    version='2.0.36',
+    version='3.0.36',
     packages=find_packages(),
     install_requires=[
         "numpy",
-        "tensorflow==2.9.1",
+        "tensorflow==2.12",
         "scikit-image==0.20.0",
         "opencv-python-headless",
         "imgaug",
