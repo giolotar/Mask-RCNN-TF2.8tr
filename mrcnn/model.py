@@ -21,6 +21,11 @@ from .CustomLayers import (
     ROIPoolingLayer,
     GetAnchors,
     NormBoxesGraph,
+    RPNClassLoss,
+    RPNBboxLoss,
+    MRCNNClassLossGraph,
+    MRCNNBboxLossGraph,
+    MRCNNMaskLossGraph,
 )
 from .MRCNNComponents import RPNComponent, MaskSegmentationComponent, ResnetComponent
 from .CustomKerasModel import MaskRCNNModel
@@ -210,6 +215,23 @@ class MaskRCNN:
 
         output_rois = KL.Lambda(lambda x: x * 1, name="output_rois")(rois)
 
+        rpn_class_loss = RPNClassLoss(  # noqa
+            name="rpn_class_loss"
+        )([input_rpn_match, rpn_component.rpn_class_logits])
+        rpn_bbox_loss = RPNBboxLoss(  # noqa
+            config.IMAGES_PER_GPU,
+            name="rpn_bbox_loss"
+        )([input_rpn_bbox, input_rpn_match, rpn_component.rpn_bbox])
+        class_loss = MRCNNClassLossGraph(  # noqa
+            name="mrcnn_class_loss"
+        )([target_class_ids, mask_component.mrcnn_class_logits, active_class_ids])
+        bbox_loss = MRCNNBboxLossGraph(  # noqa
+            name="mrcnn_bbox_loss"
+        )([target_bbox, target_class_ids, mask_component.mrcnn_bbox])
+        mask_loss = MRCNNMaskLossGraph(  # noqa
+            name="mrcnn_mask_loss"
+        )([target_mask, target_class_ids, mask_component.mrcnn_mask])
+
         # Model
         inputs = [
             input_image, input_image_meta, input_rpn_match,
@@ -220,10 +242,9 @@ class MaskRCNN:
 
         outputs = [
             rpn_component.rpn_class_logits, rpn_component.rpn_class, rpn_component.rpn_bbox,
-            mask_component.mrcnn_class_logits, mask_component.mrcnn_class,
-            mask_component.mrcnn_bbox, mask_component.mrcnn_mask,
-            rpn_component.rpn_rois, output_rois, target_class_ids, active_class_ids,
-            target_bbox, target_mask
+            mask_component.mrcnn_class_logits, mask_component.mrcnn_class, mask_component.mrcnn_bbox,
+            mask_component.mrcnn_mask, rpn_component.rpn_rois, output_rois, rpn_class_loss,
+            rpn_bbox_loss, class_loss, bbox_loss, mask_loss
         ]
         return MaskRCNNModel(inputs, outputs, name='mask_rcnn')
 
@@ -561,9 +582,28 @@ class MaskRCNN:
             # Optimizer object
             optimizer = self._get_optimizer(learning_rate, momentum)
 
-            self.keras_model.build_losses(self.config)
+            loss_names = [
+                "rpn_class_loss", "rpn_bbox_loss",
+                "mrcnn_class_loss", "mrcnn_bbox_loss", "mrcnn_mask_loss"
+            ]
+            losses_functions = [None] * len(self.keras_model.outputs)
+            # Add L2 Regularization
+            # Skip gamma and beta weights of batch normalization layers.
+            if self.config.OPTIMIZER == 'SGD' and not self.is_compiled:
+                self.keras_model.add_loss(
+                    lambda: tf.add_n([
+                        keras.regularizers.l2(self.config.WEIGHT_DECAY)(w) / tf.cast(tf.size(input=w), tf.float32)
+                        for w in self.keras_model.trainable_weights
+                        if 'gamma' not in w.name and 'beta' not in w.name]
+                    )
+                )
+            else:
+                losses_functions = [
+                    "categorical_crossentropy" if output.name in loss_names else None
+                    for output in self.keras_model.outputs
+                ]
             # Compile
-            self.keras_model.compile(optimizer=optimizer)
+            self.keras_model.compile(optimizer=optimizer, loss=losses_functions)
             self.is_compiled = True
             self.logger.info("Model compiled successfully!")
         except Exception as ex:
